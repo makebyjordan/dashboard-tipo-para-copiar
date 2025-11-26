@@ -1,5 +1,5 @@
 
-export type ViewType = 'dashboard' | 'invoices' | 'inventory' | 'clients' | 'statistics' | 'payments' | 'habits' | 'timegestion';
+export type ViewType = 'dashboard' | 'invoices' | 'habits' | 'timegestion' | 'gsheets' | 'connections' | 'contacts' | 'clients' | 'interested' | 'tocontact';
 
 export enum InvoiceStatus {
   Paid = 'Paid',

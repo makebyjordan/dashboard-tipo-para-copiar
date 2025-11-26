@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { Habit } from '../types';
 import { XIcon, PlusIcon, ChecklistIcon } from './icons';
 
@@ -7,26 +9,79 @@ const Habits: React.FC = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const contentEditableRef = useRef<HTMLDivElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Cargar hábitos desde la API
+  useEffect(() => {
+    fetchHabits();
+  }, []);
+
+  const fetchHabits = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/habits');
+      if (response.ok) {
+        const data = await response.json();
+        setHabits(data);
+      }
+    } catch (error) {
+      console.error('Error fetching habits:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
-    const newHabit: Habit = {
-      id: Date.now().toString(),
-      title,
-      content,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const response = await fetch('/api/habits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content }),
+      });
 
-    setHabits([newHabit, ...habits]);
-    setTitle('');
-    setContent('');
-    if (contentEditableRef.current) {
-      contentEditableRef.current.innerHTML = '';
+      if (response.ok) {
+        const newHabit = await response.json();
+        setHabits([newHabit, ...habits]);
+        setTitle('');
+        setContent('');
+        if (contentEditableRef.current) {
+          contentEditableRef.current.innerHTML = '';
+        }
+      }
+    } catch (error) {
+      console.error('Error creating habit:', error);
+      alert('Error al crear el hábito');
     }
   };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Estás seguro de eliminar este hábito?')) return;
+
+    try {
+      const response = await fetch(`/api/habits/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setHabits(habits.filter(h => h.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+      alert('Error al eliminar el hábito');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -147,10 +202,22 @@ const Habits: React.FC = () => {
               </div>
             </div>
             
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1C1C2E]/50 rounded-b-2xl">
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1C1C2E]/50 rounded-b-2xl flex justify-between items-center">
               <p className="text-sm text-gray-500">
                 Creado el {new Date(selectedHabit.createdAt).toLocaleString()}
               </p>
+              <button
+                onClick={() => {
+                  handleDelete(selectedHabit.id);
+                  setSelectedHabit(null);
+                }}
+                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Eliminar</span>
+              </button>
             </div>
           </div>
         </div>
